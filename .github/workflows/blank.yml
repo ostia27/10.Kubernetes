@@ -22,12 +22,13 @@ jobs:
         id: check
         run: |
           pod_status=$(kubectl get pods --field-selector=status.phase!=Running -o json | jq '.items | length')
-          echo "::set-output name=pod_status::$pod_status"
+          echo "name=pod_status::$pod_status" >> $GITHUB_OUTPUT
+
           
   notification:
     runs-on: ubuntu-latest
-    # needs: check_pods
-    # if: needs.check_pods.outputs.pod_status != '0'
+    needs: check_pods
+    if: needs.check_pods.outputs.pod_status != '0'
     steps:
     - name: Post text to a Slack channel
       uses: slackapi/slack-github-action@v2.0.0
