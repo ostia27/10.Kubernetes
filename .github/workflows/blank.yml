@@ -15,39 +15,27 @@ on:
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-    check-pods:
-      runs-on: self-hosted
-      outputs:
-        STATE_ENV: ${{ steps.init.outputs.STATE_ENV }}
-      steps:
-        - name: Export kubeconfig and get pods
-          run: |
-            export KUBECONFIG=/root/.kube/config-k3s:/root/.kube/config-k8s
-            kubectl get pods -A
-            STATUS_ARRAY=$(kubectl get pods -A | sed -n '2,$p '| awk '{print $2, $4}')
-            echo "STATUS_ARRAY_ENV<<EOF" >> $GITHUB_ENV
-            echo $STATUS_ARRAY >> $GITHUB_ENV
-            echo "EOF" >> $GITHUB_ENV
-        - name: Get result of search
-          id: init
-          run: |
-            STATUS="Error"
-            if [[ ${STATUS_ARRAY_ENV[@]} =~ $STATUS ]]
-            then
-              echo "STATE_ENV=TRUE" >> $GITHUB_OUTPUT
-            else
-              echo "STATE_ENV=FALSE" >> $GITHUB_OUTPUT
-            fi
-    notification:
-      needs: check-pods
-      runs-on: ubuntu-latest
-      if: needs.check-pods.outputs.STATE_ENV == 'TRUE'
-      steps:
-      - name: Post text to a Slack channel
-        uses: slackapi/slack-github-action@v2.0.0
-        with:
-          method: chat.postMessage
-          token: ${{ secrets.SLACK_BOT_TOKEN }}
-          payload: |
-            channel: ${{ secrets.SLACK_CHANNEL_ID }}
-            text: "howdy <@channel>!"
+  check_pods:
+    runs-on: self-hosted
+    outputs:
+      pod_status: ${{ steps.check.outputs.pod_status }}
+    steps:
+      - name: Check Kubernetes Pods
+        id: check
+        run: |
+          pod_status=$(kubectl get pods --field-selector=status.phase!=Running -o json | jq '.items | length')
+          echo "::set-output name=pod_status::$pod_status"
+          
+  notification:
+    runs-on: ubuntu-latest
+    needs: check_pods
+    if: needs.check_pods.outputs.pod_status != '0'
+    steps:
+    - name: Post text to a Slack channel
+      uses: slackapi/slack-github-action@v2.0.0
+      with:
+        method: chat.postMessage
+        token: ${{ secrets.SLACK_BOT_TOKEN }}
+        payload: |
+          channel: ${{ secrets.SLACK_CHANNEL_ID }}
+          text: "howdy <@channel>!"
