@@ -15,22 +15,39 @@ on:
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "build"
-  build:
-    # The type of runner that the job will run on
-    runs-on: ubuntu-latest
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v4
-
-      # Runs a single command using the runners shell
-      - name: Run a one-line script
-        run: echo Hello, world!
-
-      # Runs a set of commands using the runners shell
-      - name: Run a multi-line script
-        run: |
-          echo Add other actions to build,
-          echo test, and deploy your project.
+    check-pods:
+      runs-on: self-hosted
+      outputs:
+        STATE_ENV: ${{ steps.init.outputs.STATE_ENV }}
+      steps:
+        - name: Export kubeconfig and get pods
+          run: |
+            export KUBECONFIG=/root/.kube/config-k3s:/root/.kube/config-k8s
+            kubectl get pods -A
+            STATUS_ARRAY=$(kubectl get pods -A | sed -n '2,$p '| awk '{print $2, $4}')
+            echo "STATUS_ARRAY_ENV<<EOF" >> $GITHUB_ENV
+            echo $STATUS_ARRAY >> $GITHUB_ENV
+            echo "EOF" >> $GITHUB_ENV
+        - name: Get result of search
+          id: init
+          run: |
+            STATUS="Error"
+            if [[ ${STATUS_ARRAY_ENV[@]} =~ $STATUS ]]
+            then
+              echo "STATE_ENV=TRUE" >> $GITHUB_OUTPUT
+            else
+              echo "STATE_ENV=FALSE" >> $GITHUB_OUTPUT
+            fi
+    notification:
+      needs: check-pods
+      runs-on: ubuntu-latest
+      if: needs.check-pods.outputs.STATE_ENV == 'TRUE'
+      steps:
+      - name: Post text to a Slack channel
+        uses: slackapi/slack-github-action@v2.0.0
+        with:
+          method: chat.postMessage
+          token: ${{ secrets.SLACK_BOT_TOKEN }}
+          payload: |
+            channel: ${{ secrets.SLACK_CHANNEL_ID }}
+            text: "howdy <@channel>!"
