@@ -23,9 +23,9 @@ jobs:
       - name: Check Kubernetes Pods
         id: check
         run: |
-          pod_status=$(kubectl get pods -A --field-selector=status.phase!=Running -o json | jq '.items | length')
-          echo "{{pod_status}}"
-          echo "pod_status=${{pod_status}}" >> "$GITHUB_OUTPUT"
+          pod=$(kubectl get pods -A --field-selector=status.phase!=Running -o json | jq '.items | length')
+          echo "{{pod}}"
+          echo "pod_status=${{pod}}" >> "$GITHUB_OUTPUT"
 
 
   notification:
