@@ -24,7 +24,6 @@ jobs:
         id: check
         run: |
           pod=$(kubectl get pods -A --field-selector=status.phase!=Running -o json | jq '.items | length')
-          echo "{{pod}}"
           echo "pod_status=${{pod}}" >> "$GITHUB_OUTPUT"
 
 
