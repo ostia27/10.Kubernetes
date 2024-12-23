@@ -33,12 +33,11 @@ jobs:
     needs: check_pods
     if: ${{ needs.check_pods.outputs.pod_status != '0'}}
     steps:
-    - run: echo "${{ env.POD_STATUS }}"
     - name: Post text to a Slack channel
-      uses: slackapi/slack-github-action@v2.0.0
+      uses: slackapi/slack-github-action@v2.0.0needs.check_pods.outputs.pod_status
       with:
         method: chat.postMessage
         token: ${{ secrets.SLACK_BOT_TOKEN }}
         payload: |
           channel: ${{ secrets.SLACK_CHANNEL_ID }}
-          text: "howdy <@channel>!"
+          text: "${{ needs.check_pods.outputs.pod_status }} crashed pods"
