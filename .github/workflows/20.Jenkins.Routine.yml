@@ -15,4 +15,4 @@ jobs:
     steps:
       - name: Trigger Jenkins Job
         run: |
-          curl "${{ secrets.JENKINS_URL }}/job/check-user/buildWithParameters?username=${{ inputs.username }}"
+          curl "${{ secrets.JENKINS_URL }}/generic-webhook-trigger/invoke?username=${{ inputs.username }}"
